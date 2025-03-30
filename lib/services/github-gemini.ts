@@ -345,8 +345,23 @@ NOTE: Attempted to fetch ${
     }
 };
 
+/**
+ * Extracts JSON content from a string that may be wrapped in markdown code blocks.
+ * @param text The raw response text from the AI.
+ * @returns The cleaned JSON string.
+ */
+const extractJsonFromMarkdown = (text: string): string => {
+    const trimmed = text.trim();
+    const codeBlockRegex = /^```(?:json)?\s*([\s\S]*?)\s*```$/;
+    const match = codeBlockRegex.exec(trimmed);
+    if (match) {
+        return match[1].trim();
+    }
+    return trimmed;
+};
+//
 export const analyzeWithGemini = async (
-    repoIdentifier: RepoIdentifier, // Pass owner/repo for context
+    repoIdentifier: RepoIdentifier,
     content: string
 ): Promise<RepoAnalysis> => {
     const MAX_RETRIES = 3;
@@ -363,49 +378,51 @@ export const analyzeWithGemini = async (
             );
             console.time(timeLabel);
 
-            const prompt = `Analyze the following GitHub repository content for ${owner}/${repo}.
-Provide a technical assessment.
-
-**Your response MUST be a valid JSON object containing ONLY the JSON and nothing else.**
-Adhere STRICTLY to this JSON structure:
-{
-    "summary": "string (Single concise sentence: project purpose & main tech stack).",
-    "technicalHighlights": "string (Single paragraph: core technical implementation, architecture, key technologies, patterns, notable decisions. Focus on specifics).",
-    "keyFeatures": [
-        "string (Describe 1st key technical feature/implementation)",
-        "string (Describe 2nd key technical feature/implementation)",
-        "string (Describe 3rd key technical feature/implementation)",
-        "string (Describe 4th key technical feature/implementation)",
-        "string (Describe 5th key technical feature/implementation)"
-    ],
-    "complexity": "string (1-2 sentences: code structure, organization, dependencies, overall technical complexity assessment).",
-    "useCases": [
-        "string (Describe 1st specific technical use case/application)",
-        "string (Describe 2nd specific technical use case/application)",
-        "string (Optionally describe 3rd specific technical use case)"
-    ],
-    "improvements": [
-        "string (Suggest 1st concrete technical improvement)",
-        "string (Suggest 2nd concrete technical improvement)",
-        "string (Optionally suggest 3rd concrete technical improvement)"
-    ]
-}
-
-**Guidelines:**
-1.  **JSON ONLY:** Output absolutely nothing before or after the JSON object.
-2.  **Be Specific:** Use names of libraries, frameworks, algorithms, patterns observed.
-3.  **Concise:** Keep descriptions brief and to the point.
-4.  **Technical Focus:** Emphasize implementation details, architecture, and tech choices.
-5.  **Structure Adherence:** Ensure all keys are present and types match the specification (strings, arrays of strings). 'keyFeatures' must have exactly 5 elements. 'useCases' and 'improvements' should have 2-3 elements.
-6.  **Handle Limited Info:** If content is minimal (e.g., just repo metadata), state that analysis is limited due to lack of code/docs.
-
-**Repository Content to Analyze:**
-\`\`\`
-${content}
-\`\`\`
-
-**JSON Response:**`; // Explicitly ask for the JSON response
-
+            const prompt = [
+                `Analyze the following GitHub repository content for ${owner}/${repo}.`,
+                "Provide a technical assessment.",
+                "",
+                "**Your response MUST be a valid JSON object containing ONLY the JSON and nothing else. Do not wrap the JSON in code blocks, markdown, or add any additional text before or after the JSON.**",
+                "Adhere STRICTLY to this JSON structure:",
+                "{",
+                '    "summary": "string (Single concise sentence: project purpose & main tech stack).",',
+                '    "technicalHighlights": "string (Single paragraph: core technical implementation, architecture, key technologies, patterns, notable decisions. Focus on specifics).",',
+                '    "keyFeatures": [',
+                '        "string (Describe 1st key technical feature/implementation)",',
+                '        "string (Describe 2nd key technical feature/implementation)",',
+                '        "string (Describe 3rd key technical feature/implementation)",',
+                '        "string (Describe 4th key technical feature/implementation)",',
+                '        "string (Describe 5th key technical feature/implementation)"',
+                "    ],",
+                '    "complexity": "string (1-2 sentences: code structure, organization, dependencies, overall technical complexity assessment).",',
+                '    "useCases": [',
+                '        "string (Describe 1st specific technical use case/application)",',
+                '        "string (Describe 2nd specific technical use case/application)",',
+                '        "string (Optionally describe 3rd specific technical use case)"',
+                "    ],",
+                '    "improvements": [',
+                '        "string (Suggest 1st concrete technical improvement)",',
+                '        "string (Suggest 2nd concrete technical improvement)",',
+                '        "string (Optionally suggest 3rd concrete technical improvement)"',
+                "    ]",
+                "}",
+                "",
+                "**Guidelines:**",
+                "1. **JSON ONLY:** Output absolutely nothing before or after the JSON object.",
+                "2. **No Code Blocks:** Do not enclose the JSON in ```json, ```, or any markdown formatting.",
+                "3. **Be Specific:** Use names of libraries, frameworks, algorithms, patterns observed.",
+                "4. **Concise:** Keep descriptions brief and to the point.",
+                "5. **Technical Focus:** Emphasize implementation details, architecture, and tech choices.",
+                "6. **Structure Adherence:** Ensure all keys are present and types match the specification.",
+                "7. **Handle Limited Info:** If content is minimal (e.g., just repo metadata), state that analysis is limited.",
+                "",
+                "**Repository Content to Analyze:**",
+                "```",
+                content,
+                "```",
+                "",
+                "**JSON Response:**",
+            ].join("\n");
             const result = await model.generateContent(prompt);
             const response = result.response;
             const candidate = response?.candidates?.[0];
@@ -427,41 +444,24 @@ ${content}
 
             const responseText = candidate.content.parts[0].text.trim();
 
-            // Basic check for JSON structure before parsing
-            if (!responseText.startsWith("{") || !responseText.endsWith("}")) {
-                console.error(
-                    `[AI Analysis ${owner}/${repo}] Response is not wrapped in {}:`,
-                    responseText
-                );
-                throw new Error(
-                    "Invalid response format from AI: Expected JSON object."
-                );
-            }
+            // Extract JSON from potential markdown code blocks
+            const cleanedText = extractJsonFromMarkdown(responseText);
 
-            // Validate if the string looks like the expected JSON structure
-            if (!isValidJsonAnalysisStructure(responseText)) {
-                console.error(
-                    `[AI Analysis ${owner}/${repo}] Invalid JSON structure in response:`,
-                    responseText
-                );
-                throw new Error("Invalid JSON structure received from AI.");
-            }
-
-            // Parse the JSON response
+            // Parse the cleaned text as JSON
             let parsedJson: any;
             try {
-                parsedJson = JSON.parse(responseText);
+                parsedJson = JSON.parse(cleanedText);
             } catch (parseError: any) {
                 console.error(
-                    `[AI Analysis ${owner}/${repo}] Failed to parse JSON response: ${parseError.message}`,
-                    responseText
+                    `[AI Analysis ${owner}/${repo}] Failed to parse cleaned response as JSON: ${parseError.message}`,
+                    cleanedText
                 );
                 throw new Error(
                     `Failed to parse AI response as JSON: ${parseError.message}`
                 );
             }
 
-            // Validate the parsed object's structure and types more thoroughly
+            // Validate the parsed object's structure and types
             if (!isValidAnalysisObject(parsedJson)) {
                 console.error(
                     `[AI Analysis ${owner}/${repo}] Parsed JSON does not match required RepoAnalysis structure:`,
@@ -481,7 +481,7 @@ ${content}
                 useCases: parsedJson.useCases,
                 improvements: parsedJson.improvements,
                 lastAnalyzed: new Date().toISOString(),
-                analysisQuality: "detailed" as const, // Mark as detailed since it came from AI
+                analysisQuality: "detailed" as const,
             };
 
             console.timeEnd(timeLabel);
@@ -502,9 +502,7 @@ ${content}
                 console.error(
                     `[AI Analysis ${owner}/${repo}] Max retries exceeded. Failing analysis.`
                 );
-                // Check if the error is due to rate limiting even on the last attempt
                 if (error.status === 429 || error.message?.includes("429")) {
-                    // Gemini might throw error with 429 in message
                     console.warn(
                         `[AI Analysis ${owner}/${repo}] Rate limit hit on final attempt, returning basic analysis.`
                     );
@@ -520,7 +518,6 @@ ${content}
                         analysisQuality: "basic" as const,
                     };
                 }
-                // Throw the last encountered error if it wasn't rate limiting or max retries reached
                 throw new Error(
                     `AI analysis failed after ${
                         MAX_RETRIES + 1
@@ -528,10 +525,7 @@ ${content}
                 );
             }
 
-            // Implement backoff strategy
-            let backoffTime = 1500 * Math.pow(2, retries); // Exponential backoff starting at 1.5s
-
-            // Handle rate limiting specifically (e.g., 429 Too Many Requests)
+            let backoffTime = 1500 * Math.pow(2, retries);
             if (error.status === 429 || error.message?.includes("429")) {
                 console.log(
                     `[AI Analysis ${owner}/${repo}] Rate limit hit, backing off for ${backoffTime}ms...`
@@ -541,10 +535,9 @@ ${content}
                     `[AI Analysis ${owner}/${repo}] Encountered error, backing off for ${backoffTime}ms...`
                 );
             }
-            await sleep(backoffTime); // Wait before retrying
+            await sleep(backoffTime);
         }
     }
-    // This point should technically be unreachable due to the throw in the loop, but satisfies TS
     throw new Error(
         `Max retries exceeded for AI analysis for ${owner}/${repo}`
     );

@@ -59,16 +59,16 @@ export async function POST(req: NextRequest) {
             const url = `https://devpost.com/software/${id}`;
             const scrapeData = await scrapeDevPost(url);
 
-            const match = scrapeData.markdown.match(
-                /\[GitHub Repo\]\(([^ ]+)\)/
-            );
+            const githubRegex = /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)/;
 
-            const githubUrl = match ? match[1] : "Not Found";
+            const githubMatch = githubRegex.exec(scrapeData.markdown);
 
             rawpost = await RawDevPostModel.create({
                 scrapeData,
                 id,
-                githubUrl,
+                githubUrl: githubMatch
+                    ? `https://github.com/${githubMatch[1]}`
+                    : "Not Found",
                 createdAt: new Date(),
                 updatedAt: new Date(),
             });
