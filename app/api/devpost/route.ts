@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
         } else {
             githubAnalysis = { error: "No GitHub repository found" };
         }
-
+        
         // Save and return the analyzed data
         const devpost = await DevPostModel.create({
             id,

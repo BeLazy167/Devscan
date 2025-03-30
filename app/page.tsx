@@ -2,8 +2,23 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ChevronRight, Code, Sparkles, Zap } from "lucide-react";
+import { ChevronRight, Code, Sparkles, Zap, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+
+// Predefined values for animations to avoid hydration mismatches
+const BLOB_CONFIGS = [
+    { width: 450, height: 350, left: 15, top: 25, duration: 42 },
+    { width: 550, height: 450, left: 75, top: 65, duration: 38 },
+    { width: 400, height: 400, left: 45, top: 10, duration: 45 },
+    { width: 350, height: 300, left: 10, top: 80, duration: 35 },
+    { width: 300, height: 350, left: 80, top: 30, duration: 32 },
+];
+
+const PARTICLE_CONFIGS = [
+    { floatX: 20, floatY: -15, delay: 0 },
+    { floatX: -20, floatY: 20, delay: 1.5 },
+    { floatX: 10, floatY: 25, delay: 3 },
+];
 
 export default function Home() {
     const router = useRouter();
@@ -41,18 +56,18 @@ export default function Home() {
             <div className="absolute inset-0 bg-[#0a0a16] overflow-hidden">
                 <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_center,#10b981_0%,transparent_50%)]"></div>
 
-                {/* Animated background shapes */}
-                {[...Array(5)].map((_, i) => (
+                {/* Animated background shapes - using predefined values */}
+                {BLOB_CONFIGS.map((config, i) => (
                     <div
                         key={i}
                         className="absolute rounded-full bg-gradient-to-br from-emerald-500/20 to-teal-600/20 blur-xl animate-blob"
                         style={{
-                            width: Math.random() * 400 + 200,
-                            height: Math.random() * 400 + 200,
-                            left: `${Math.random() * 100}%`,
-                            top: `${Math.random() * 100}%`,
+                            width: config.width,
+                            height: config.height,
+                            left: `${config.left}%`,
+                            top: `${config.top}%`,
                             animationDelay: `${i * -6}s`,
-                            animationDuration: `${30 + Math.random() * 20}s`,
+                            animationDuration: `${config.duration}s`,
                         }}
                     />
                 ))}
@@ -73,8 +88,8 @@ export default function Home() {
                             <div className="absolute inset-0 rounded-full border-2 border-emerald-400/30 animate-pulse"></div>
                         </div>
 
-                        {/* Floating particles */}
-                        {[...Array(3)].map((_, i) => (
+                        {/* Floating particles - using predefined values */}
+                        {PARTICLE_CONFIGS.map((config, i) => (
                             <div
                                 key={i}
                                 className="absolute w-2 h-2 rounded-full bg-emerald-400 animate-float"
@@ -82,13 +97,9 @@ export default function Home() {
                                     {
                                         top: "50%",
                                         left: "50%",
-                                        "--float-x": `${
-                                            (Math.random() - 0.5) * 60
-                                        }px`,
-                                        "--float-y": `${
-                                            (Math.random() - 0.5) * 60
-                                        }px`,
-                                        animationDelay: `${i * 1.5}s`,
+                                        "--float-x": `${config.floatX}px`,
+                                        "--float-y": `${config.floatY}px`,
+                                        animationDelay: `${config.delay}s`,
                                     } as React.CSSProperties
                                 }
                             />
@@ -115,28 +126,50 @@ export default function Home() {
                     </div>
 
                     {/* Animated CTA button */}
-                    <div
-                        className="relative transition-transform duration-200 ease-out"
-                        style={{
-                            transform: isMounted
-                                ? `translate(${calcParallax(100).x}px, ${
-                                      calcParallax(100).y
-                                  }px)`
-                                : "none",
-                        }}
-                    >
-                        <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 opacity-70 blur-lg group-hover:opacity-100 transition duration-1000"></div>
-                        <Button
-                            size="lg"
-                            onClick={() => router.push("/hackathons/1")}
-                            className="relative bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white border-0 px-8 py-7 text-lg rounded-lg shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_30px_rgba(16,185,129,0.8)] transition-all duration-300 group"
+                    <div className="flex gap-4">
+                        <div
+                            className="relative transition-transform duration-200 ease-out"
+                            style={{
+                                transform: isMounted
+                                    ? `translate(${calcParallax(100).x}px, ${
+                                          calcParallax(100).y
+                                      }px)`
+                                    : "none",
+                            }}
                         >
-                            <span className="mr-2">Explore MLH Projects</span>
-                            <span className="animate-bounce-x">
-                                <ChevronRight className="h-5 w-5" />
-                            </span>
-                            <span className="absolute inset-0 rounded-lg border border-emerald-400/50 animate-pulse"></span>
-                        </Button>
+                            <div className="absolute -inset-1 rounded-lg bg-gradient-to-r from-emerald-500 to-teal-600 opacity-70 blur-lg group-hover:opacity-100 transition duration-1000"></div>
+                            <Button
+                                size="lg"
+                                onClick={() => router.push("/software")}
+                                className="relative bg-gradient-to-r from-emerald-600 to-teal-700 hover:from-emerald-500 hover:to-teal-600 text-white border-0 px-8 py-7 text-lg rounded-lg shadow-[0_0_30px_rgba(16,185,129,0.5)] hover:shadow-[0_0_30px_rgba(16,185,129,0.8)] transition-all duration-300 group"
+                            >
+                                <span className="mr-2">Explore Projects</span>
+                                <span className="animate-bounce-x">
+                                    <ChevronRight className="h-5 w-5" />
+                                </span>
+                                <span className="absolute inset-0 rounded-lg border border-emerald-400/50 animate-pulse"></span>
+                            </Button>
+                        </div>
+
+                        <div
+                            className="relative transition-transform duration-200 ease-out"
+                            style={{
+                                transform: isMounted
+                                    ? `translate(${calcParallax(100).x}px, ${
+                                          calcParallax(100).y
+                                      }px)`
+                                    : "none",
+                            }}
+                        >
+                            <Button
+                                size="lg"
+                                onClick={() => router.push("/search")}
+                                className="relative bg-black/40 hover:bg-black/60 text-white border border-emerald-500/30 px-8 py-7 text-lg rounded-lg hover:border-emerald-500/60 transition-all duration-300 group"
+                            >
+                                <span className="mr-2">Search Projects</span>
+                                <Search className="h-5 w-5" />
+                            </Button>
+                        </div>
                     </div>
 
                     {/* Feature highlights */}

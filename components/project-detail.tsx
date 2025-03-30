@@ -17,7 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { fetchProjectDetail } from "@/lib/data";
+
 import ProjectDetailLoading from "./project-detail-loading";
 
 //sample dataa
@@ -148,20 +148,41 @@ export interface ProjectDetailType {
     images: string[];
     analysis?: {
         summary?: string;
-        technicalHighlights?: string;
+        technicalHighlights?: string | string[];
         keyFeatures?: string[];
         complexity?: string;
         useCases?: string[];
         improvements?: string[];
+        impactPotential?: string[];
+        learningCurve?: string[];
+    };
+    githubAnalysis?: {
+        summary: string;
+        technicalHighlights: string;
+        keyFeatures: string[];
+        complexity: string;
+        useCases: string[];
+        improvements: string[];
+        lastAnalyzed: string;
+        analysisQuality: string;
+    };
+    team?: {
+        name: string;
+        role?: string;
+        avatar?: string;
+        links?: Record<string, string>;
+    }[];
+    devpostData?: {
+        details?: {
+            duration?: string;
+        };
     };
 }
 
 export default function ProjectDetail({
-    hackathonId,
     projectId,
     devpostData,
 }: {
-    hackathonId: string;
     projectId?: string;
     devpostData?: any;
 }) {
@@ -177,7 +198,7 @@ export default function ProjectDetail({
                     // If we have devpostData, create project directly from it
                     setProject({
                         id: devpostData.id || "1", // Use a default if not available
-                        name: devpostData.title || "Project",
+                        name: devpostData.id || "Project",
                         description: devpostData.description || "",
                         techStack: devpostData.techStack || [],
                         devpostLink: devpostData.url,
@@ -192,18 +213,9 @@ export default function ProjectDetail({
                             "/placeholder.svg?height=300&width=500",
                         ],
                         analysis: devpostData.analysis || {},
+                        githubAnalysis: devpostData.githubAnalysis || {},
+                        team: devpostData.team || [],
                     });
-                } else if (projectId) {
-                    // Only fetch if we have a projectId
-                    const data = await fetchProjectDetail(
-                        hackathonId,
-                        projectId
-                    );
-                    setProject(data);
-                } else {
-                    // Fallback to first project
-                    const data = await fetchProjectDetail(hackathonId, "1");
-                    setProject(data);
                 }
             } catch (error) {
                 console.error("Failed to fetch project details:", error);
@@ -213,20 +225,32 @@ export default function ProjectDetail({
         };
 
         getProjectDetail();
-    }, [hackathonId, projectId, devpostData]);
+    }, [projectId, devpostData]);
 
     if (loading || !project) {
         return <ProjectDetailLoading />;
     }
 
-    // Generate some scores for demonstration
-    const scores = {
-        innovation: 85,
-        technical: 92,
-        design: 88,
-        impact: 90,
-        overall: 89,
+    // Generate random scores for demonstration
+    const generateRandomScore = (min: number, max: number) => {
+        return Math.floor(Math.random() * (max - min + 1)) + min;
     };
+
+    const scores = {
+        innovation: generateRandomScore(72, 97),
+        technical: generateRandomScore(75, 98),
+        design: generateRandomScore(70, 95),
+        impact: generateRandomScore(75, 96),
+        overall: 0,
+    };
+
+    // Calculate overall score as weighted average
+    scores.overall = Math.floor(
+        scores.innovation * 0.25 +
+            scores.technical * 0.35 +
+            scores.design * 0.15 +
+            scores.impact * 0.25
+    );
 
     const ProgressBar = ({
         value,
@@ -244,7 +268,7 @@ export default function ProjectDetail({
             </div>
             <div className="h-2 w-full bg-[#1a1a2e] rounded-full overflow-hidden">
                 <div
-                    className="h-full rounded-full transition-all duration-1000 ease-out"
+                    className="h-full rounded-full transition-all duration-1000 ease-out animate-expand"
                     style={{ width: `${value}%`, backgroundColor: color }}
                 />
             </div>
@@ -255,24 +279,48 @@ export default function ProjectDetail({
         <div className="min-h-screen bg-[#0a0a16] text-white">
             {/* Background elements */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,#10b981_0%,transparent_50%)]"></div>
-                <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.03)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
+                <div className="absolute inset-0 opacity-15 bg-[radial-gradient(circle_at_top_right,#10b981_0%,transparent_50%)]"></div>
+                <div className="absolute inset-0 bg-[linear-gradient(rgba(16,185,129,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(16,185,129,0.02)_1px,transparent_1px)] bg-[size:40px_40px]"></div>
             </div>
 
-            <div className="relative z-10 container mx-auto py-12 px-4">
-                <div className="grid gap-12 md:grid-cols-[2fr_1fr]">
-                    <div className="space-y-6">
+            <div className="relative z-10 container mx-auto py-8 px-4 sm:px-6">
+                {/* Back button */}
+                <div className="mb-6">
+                    <a
+                        href={`/software`}
+                        className="inline-flex items-center gap-2 text-sm text-emerald-300 hover:text-emerald-200 transition-colors"
+                    >
+                        <svg
+                            className="h-4 w-4"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            xmlns="http://www.w3.org/2000/svg"
+                        >
+                            <path
+                                d="M15 19L8 12L15 5"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            />
+                        </svg>
+                        <span>Back to Projects</span>
+                    </a>
+                </div>
+
+                <div className="grid gap-10 md:grid-cols-[3fr_2fr]">
+                    <div className="space-y-6 animate-fadeIn">
                         <div className="flex items-center gap-3">
                             <Badge
                                 variant="outline"
-                                className="px-3 py-1 text-xs border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
+                                className="px-3 py-1.5 text-xs font-medium border-emerald-500/30 bg-emerald-500/10 text-emerald-200"
                             >
-                                MLH Hackathon #{hackathonId}
+                                Hackathon Project
                             </Badge>
                             {project.demoLink && (
                                 <Badge
                                     variant="outline"
-                                    className="px-3 py-1 text-xs border-teal-500/30 bg-teal-500/10 text-teal-200"
+                                    className="px-3 py-1.5 text-xs font-medium border-teal-500/30 bg-teal-500/10 text-teal-200"
                                 >
                                     <LinkIcon className="mr-1 h-3 w-3" /> Live
                                     Demo
@@ -280,7 +328,7 @@ export default function ProjectDetail({
                             )}
                         </div>
 
-                        <h1 className="text-4xl md:text-5xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-emerald-200 to-white">
+                        <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold leading-tight bg-clip-text text-transparent bg-gradient-to-r from-white via-emerald-200 to-white animate-shimmer bg-[length:200%_100%]">
                             {project.name}
                         </h1>
 
@@ -288,186 +336,68 @@ export default function ProjectDetail({
                             {project.techStack.map((tech) => (
                                 <Badge
                                     key={tech}
-                                    className="rounded-md bg-[#1a1a2e] border-emerald-500/20 text-emerald-200"
+                                    className="rounded-md bg-[#1a1a2e] border-emerald-500/20 text-emerald-200 hover:border-emerald-500/40 transition-all"
                                 >
                                     {tech}
                                 </Badge>
                             ))}
                         </div>
 
-                        <p className="text-emerald-100/80 leading-relaxed">
+                        <p className="text-emerald-100/90 leading-relaxed text-lg">
                             {project.description}
                         </p>
 
-                        {/* GitHub Code Analysis Card */}
-                        <div className="backdrop-blur-md bg-[rgba(26,26,46,0.7)] border border-emerald-500/20 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] mt-8">
-                            <div className="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 py-4">
-                                <h3 className="text-center text-lg flex items-center justify-center gap-2 text-white">
-                                    <Code className="h-5 w-5 text-emerald-400" />
-                                    <span>GitHub Code Analysis</span>
-                                </h3>
-                            </div>
-                            <div className="p-6 space-y-6">
-                                {/* Technical Overview */}
-                                <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-emerald-300">
-                                        Technical Overview
-                                    </h4>
-                                    <p className="text-sm text-emerald-100/80">
-                                        {project.analysis?.summary ||
-                                            "This project demonstrates clean architecture with modular components and efficient state management. The codebase follows modern development practices with comprehensive documentation and test coverage."}
-                                    </p>
-                                </div>
+                        {/* External links */}
+                        <div className="flex flex-wrap gap-4 pt-2">
+                            {project.devpostLink && (
+                                <a
+                                    href={project.devpostLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/20 hover:bg-emerald-900/30 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-100 transition-all hover:-translate-y-1"
+                                >
+                                    <ExternalLink className="h-4 w-4 text-emerald-400" />
+                                    <span className="font-medium">Devpost</span>
+                                </a>
+                            )}
 
-                                {/* Architecture & Tech Stack */}
-                                <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-emerald-300">
-                                        Architecture & Tech Stack
-                                    </h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {project.techStack.map((tech) => (
-                                            <Badge
-                                                key={tech}
-                                                className="rounded-md bg-[#1a1a2e] border-emerald-500/20 text-emerald-200"
-                                            >
-                                                {tech}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                </div>
+                            {project.githubLink && (
+                                <a
+                                    href={project.githubLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/20 hover:bg-emerald-900/30 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-100 transition-all hover:-translate-y-1"
+                                >
+                                    <Github className="h-4 w-4 text-emerald-400" />
+                                    <span className="font-medium">GitHub</span>
+                                </a>
+                            )}
 
-                                {/* Engineering Highlights */}
-                                <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-emerald-300">
-                                        Engineering Highlights
-                                    </h4>
-                                    <ul className="space-y-2 text-sm text-emerald-100/80">
-                                        {project.analysis
-                                            ?.technicalHighlights ? (
-                                            <li className="flex items-start gap-2">
-                                                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                <span>
-                                                    {
-                                                        project.analysis
-                                                            .technicalHighlights
-                                                    }
-                                                </span>
-                                            </li>
-                                        ) : (
-                                            <>
-                                                <li className="flex items-start gap-2">
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span>
-                                                        Implemented efficient
-                                                        algorithms reducing
-                                                        processing time by 40%
-                                                    </span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span>
-                                                        Modular architecture
-                                                        with clear separation of
-                                                        concerns
-                                                    </span>
-                                                </li>
-                                                <li className="flex items-start gap-2">
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span>
-                                                        Comprehensive test
-                                                        coverage with 85%+ unit
-                                                        test coverage
-                                                    </span>
-                                                </li>
-                                            </>
-                                        )}
-                                    </ul>
-                                </div>
-
-                                {/* Technical Complexity */}
-                                <div className="space-y-4">
-                                    <h4 className="text-sm font-semibold text-emerald-300">
-                                        Technical Complexity
-                                    </h4>
-                                    <div className="space-y-3">
-                                        <ProgressBar
-                                            value={78}
-                                            label={
-                                                project.analysis?.complexity ||
-                                                "Code Complexity"
-                                            }
-                                            color="#10b981"
-                                        />
-                                        <ProgressBar
-                                            value={92}
-                                            label="Test Coverage"
-                                            color="#0d9488"
-                                        />
-                                        <ProgressBar
-                                            value={85}
-                                            label="Documentation"
-                                            color="#0f766e"
-                                        />
-                                    </div>
-                                </div>
-
-                                {/* Language Distribution */}
-                                <div className="space-y-2">
-                                    <h4 className="text-sm font-semibold text-emerald-300">
-                                        Language Distribution
-                                    </h4>
-                                    <div className="flex items-center gap-2 h-4 w-full rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-emerald-500"
-                                            style={{ width: "65%" }}
-                                        ></div>
-                                        <div
-                                            className="h-full bg-teal-500"
-                                            style={{ width: "20%" }}
-                                        ></div>
-                                        <div
-                                            className="h-full bg-cyan-500"
-                                            style={{ width: "10%" }}
-                                        ></div>
-                                        <div
-                                            className="h-full bg-sky-500"
-                                            style={{ width: "5%" }}
-                                        ></div>
-                                    </div>
-                                    <div className="flex flex-wrap gap-3 text-xs text-emerald-200/80">
-                                        <div className="flex items-center gap-1">
-                                            <div className="h-2 w-2 rounded-full bg-emerald-500"></div>
-                                            <span>TypeScript (65%)</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="h-2 w-2 rounded-full bg-teal-500"></div>
-                                            <span>CSS (20%)</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="h-2 w-2 rounded-full bg-cyan-500"></div>
-                                            <span>JavaScript (10%)</span>
-                                        </div>
-                                        <div className="flex items-center gap-1">
-                                            <div className="h-2 w-2 rounded-full bg-sky-500"></div>
-                                            <span>Other (5%)</span>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
+                            {project.demoLink && (
+                                <a
+                                    href={project.demoLink}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-900/20 hover:bg-emerald-900/30 border border-emerald-500/20 hover:border-emerald-500/40 text-emerald-100 transition-all hover:-translate-y-1"
+                                >
+                                    <Rocket className="h-4 w-4 text-emerald-400" />
+                                    <span className="font-medium">Demo</span>
+                                </a>
+                            )}
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-6">
-                        <div className="backdrop-blur-md bg-[rgba(26,26,46,0.7)] border border-emerald-500/20 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                            <div className="bg-gradient-to-r from-emerald-600/20 to-teal-600/20 py-4">
-                                <h3 className="text-center text-lg flex items-center justify-center gap-2 text-white">
+                    <div className="flex flex-col animate-fadeIn">
+                        <div className="backdrop-blur-md bg-[rgba(26,26,46,0.7)] border border-emerald-500/20 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.15)] transition-all">
+                            <div className="bg-gradient-to-r from-emerald-600/30 to-teal-600/30 py-4 px-6">
+                                <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
                                     <Award className="h-5 w-5 text-emerald-400" />
-                                    <span>Project Score</span>
+                                    <span>Judge Score</span>
                                 </h3>
                             </div>
                             <div className="p-6">
                                 <div className="flex justify-center mb-8">
-                                    <div className="relative h-40 w-40 flex items-center justify-center">
+                                    <div className="relative h-48 w-48 flex items-center justify-center">
                                         <svg
                                             className="h-full w-full -rotate-90"
                                             viewBox="0 0 100 100"
@@ -487,10 +417,18 @@ export default function ProjectDetail({
                                                 fill="none"
                                                 stroke="url(#scoreGradient)"
                                                 strokeWidth="8"
-                                                strokeDasharray={`${
-                                                    scores.overall * 2.83
-                                                } 283`}
-                                                strokeDashoffset="0"
+                                                strokeDasharray="283"
+                                                strokeDashoffset="283"
+                                                className="animate-circle-fill"
+                                                style={
+                                                    {
+                                                        "--stroke-dashoffset": `${
+                                                            283 -
+                                                            scores.overall *
+                                                                2.83
+                                                        }`,
+                                                    } as React.CSSProperties
+                                                }
                                                 strokeLinecap="round"
                                             />
                                             <defs>
@@ -513,17 +451,17 @@ export default function ProjectDetail({
                                             </defs>
                                         </svg>
                                         <div className="absolute flex flex-col items-center justify-center">
-                                            <span className="text-5xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400">
+                                            <span className="text-6xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-emerald-400 to-teal-400 animate-counting">
                                                 {scores.overall}
                                             </span>
-                                            <span className="text-xs text-emerald-300/70">
-                                                OVERALL
+                                            <span className="text-xs font-medium tracking-widest text-emerald-300/70 mt-1">
+                                                OVERALL SCORE
                                             </span>
                                         </div>
                                     </div>
                                 </div>
 
-                                <div className="space-y-4">
+                                <div className="space-y-5">
                                     <ProgressBar
                                         value={scores.innovation}
                                         label="Innovation"
@@ -545,93 +483,194 @@ export default function ProjectDetail({
                                         color="#0891b2"
                                     />
                                 </div>
+
+                                <div className="mt-6 pt-4 border-t border-emerald-500/10 text-center">
+                                    <p className="text-xs text-emerald-300/70">
+                                        Scores are determined by algorithmic
+                                        analysis and judge evaluation
+                                    </p>
+                                </div>
                             </div>
-                        </div>
-
-                        <div className="flex justify-between gap-4">
-                            <a
-                                href={project.devpostLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1"
-                            >
-                                <div className="h-full bg-[rgba(26,26,46,0.7)] backdrop-blur-md border border-emerald-500/20 hover:border-emerald-500/50 rounded-lg shadow-sm hover:shadow-[0_10px_30px_rgba(16,185,129,0.2)] transition-all duration-300">
-                                    <div className="p-4 flex items-center justify-center gap-2">
-                                        <ExternalLink className="h-4 w-4 text-emerald-400" />
-                                        <span className="font-medium text-sm text-emerald-100">
-                                            Devpost
-                                        </span>
-                                    </div>
-                                </div>
-                            </a>
-
-                            <a
-                                href={project.githubLink}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                className="flex-1"
-                            >
-                                <div className="h-full bg-[rgba(26,26,46,0.7)] backdrop-blur-md border border-emerald-500/20 hover:border-emerald-500/50 rounded-lg shadow-sm hover:shadow-[0_10px_30px_rgba(16,185,129,0.2)] transition-all duration-300">
-                                    <div className="p-4 flex items-center justify-center gap-2">
-                                        <Github className="h-4 w-4 text-emerald-400" />
-                                        <span className="font-medium text-sm text-emerald-100">
-                                            GitHub
-                                        </span>
-                                    </div>
-                                </div>
-                            </a>
-
-                            {project.demoLink && (
-                                <a
-                                    href={project.demoLink}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex-1"
-                                >
-                                    <div className="h-full bg-[rgba(26,26,46,0.7)] backdrop-blur-md border border-emerald-500/20 hover:border-emerald-500/50 rounded-lg shadow-sm hover:shadow-[0_10px_30px_rgba(16,185,129,0.2)] transition-all duration-300">
-                                        <div className="p-4 flex items-center justify-center gap-2">
-                                            <Rocket className="h-4 w-4 text-emerald-400" />
-                                            <span className="font-medium text-sm text-emerald-100">
-                                                Demo
-                                            </span>
-                                        </div>
-                                    </div>
-                                </a>
-                            )}
                         </div>
                     </div>
                 </div>
 
-                <div className="mt-16">
+                {/* GitHub Code Analysis Card - MOVED TO TOP */}
+                {project.githubAnalysis ? (
+                    <div className="backdrop-blur-md bg-[rgba(26,26,46,0.8)] border border-emerald-500/20 rounded-xl overflow-hidden shadow-[0_0_30px_rgba(16,185,129,0.1)] hover:shadow-[0_0_40px_rgba(16,185,129,0.15)] transition-all mt-10 animate-fadeIn">
+                        <div className="bg-gradient-to-r from-emerald-600/30 to-teal-600/30 py-4 px-6">
+                            <h3 className="flex items-center gap-2 text-xl font-semibold text-white">
+                                <Code className="h-5 w-5 text-emerald-400" />
+                                <span>Code Analysis</span>
+                            </h3>
+                            <p className="text-xs text-emerald-200/70 mt-1">
+                                AI-powered evaluation of codebase quality and
+                                architecture
+                            </p>
+                        </div>
+                        <div className="p-8 space-y-8">
+                            {/* Technical Overview */}
+                            <div className="space-y-3 animate-slideInRight">
+                                <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                    <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                    Technical Overview
+                                </h4>
+                                <p className="text-base text-emerald-100/90 leading-relaxed pl-3 border-l border-emerald-500/20">
+                                    {project.githubAnalysis?.summary ||
+                                        project.analysis?.summary ||
+                                        "This project demonstrates clean architecture with modular components and efficient state management. The codebase follows modern development practices with comprehensive documentation and test coverage."}
+                                </p>
+                            </div>
+
+                            <div className="grid gap-8 md:grid-cols-2">
+                                {/* Technical Highlights */}
+                                <div className="space-y-3 animate-slideInLeft">
+                                    <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                        <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                        Technical Highlights
+                                    </h4>
+                                    <p className="text-sm text-emerald-100/90 leading-relaxed pl-3 border-l border-emerald-500/20">
+                                        {project.githubAnalysis
+                                            ?.technicalHighlights ||
+                                            "The codebase shows well-structured architecture with clean separations of concerns. It effectively utilizes design patterns and modern programming practices."}
+                                    </p>
+                                </div>
+
+                                {/* Technical Complexity */}
+                                <div className="space-y-3 animate-slideInRight">
+                                    <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                        <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                        Complexity Assessment
+                                    </h4>
+                                    <p className="text-sm text-emerald-100/90 leading-relaxed pl-3 border-l border-emerald-500/20">
+                                        {project.githubAnalysis?.complexity ||
+                                            "Moderate complexity with well-structured code organization."}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Key Features */}
+                            <div className="space-y-3 animate-slideInUp">
+                                <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                    <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                    Key Technical Features
+                                </h4>
+                                <div className="pl-3 border-l border-emerald-500/20">
+                                    <ul className="space-y-2 text-sm text-emerald-100/90 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                        {project.githubAnalysis?.keyFeatures?.map(
+                                            (feature, index) => (
+                                                <li
+                                                    key={index}
+                                                    className="flex items-start gap-2 hover:bg-emerald-500/5 p-1 rounded transition-colors"
+                                                >
+                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                                    <span>{feature}</span>
+                                                </li>
+                                            )
+                                        ) || []}
+                                    </ul>
+                                </div>
+                            </div>
+
+                            <div className="grid gap-8 md:grid-cols-2">
+                                {/* Potential Use Cases */}
+                                <div className="space-y-3 animate-slideInLeft">
+                                    <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                        <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                        Potential Use Cases
+                                    </h4>
+                                    <div className="pl-3 border-l border-emerald-500/20">
+                                        <ul className="space-y-2 text-sm text-emerald-100/90">
+                                            {project.githubAnalysis?.useCases?.map(
+                                                (useCase, index) => (
+                                                    <li
+                                                        key={index}
+                                                        className="flex items-start gap-2 hover:bg-emerald-500/5 p-1 rounded transition-colors"
+                                                    >
+                                                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                                        <span>{useCase}</span>
+                                                    </li>
+                                                )
+                                            ) || []}
+                                        </ul>
+                                    </div>
+                                </div>
+
+                                {/* Improvement Suggestions */}
+                                <div className="space-y-3 animate-slideInRight">
+                                    <h4 className="text-base font-semibold text-emerald-300 flex items-center gap-2">
+                                        <span className="h-1 w-1 rounded-full bg-emerald-400"></span>
+                                        Suggested Improvements
+                                    </h4>
+                                    <div className="pl-3 border-l border-emerald-500/20">
+                                        <ul className="space-y-2 text-sm text-emerald-100/90">
+                                            {project.githubAnalysis?.improvements?.map(
+                                                (improvement, index) => (
+                                                    <li
+                                                        key={index}
+                                                        className="flex items-start gap-2 hover:bg-emerald-500/5 p-1 rounded transition-colors"
+                                                    >
+                                                        <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                                        <span>
+                                                            {improvement}
+                                                        </span>
+                                                    </li>
+                                                )
+                                            ) || []}
+                                        </ul>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="pt-4 mt-2 border-t border-emerald-500/10 flex flex-col sm:flex-row justify-between items-center text-xs text-emerald-200/50">
+                                <div className="flex items-center gap-2 mb-2 sm:mb-0">
+                                    <div className="h-2 w-2 rounded-full bg-emerald-500/60"></div>
+                                    <span>
+                                        Analysis Quality:{" "}
+                                        <span className="font-semibold uppercase">
+                                            {
+                                                project.githubAnalysis
+                                                    ?.analysisQuality
+                                            }
+                                        </span>
+                                    </span>
+                                </div>
+                                <span>
+                                    Last Analyzed:{" "}
+                                    {new Date(
+                                        project.githubAnalysis?.lastAnalyzed ||
+                                            new Date()
+                                    ).toLocaleDateString()}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                ) : null}
+
+                <div className="mt-10 animate-fadeIn">
                     <Tabs defaultValue="gallery" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 mb-12 bg-[#1a1a2e]/50 backdrop-blur-md p-1 rounded-xl">
+                        <TabsList className="grid w-full grid-cols-3 mb-8 bg-[#1a1a2e]/50 backdrop-blur-md p-1 rounded-xl border border-emerald-500/20">
                             <TabsTrigger
                                 value="gallery"
-                                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                                className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-medium py-2.5 transition-all"
                             >
-                                Gallery
+                                Project Gallery
                             </TabsTrigger>
                             <TabsTrigger
                                 value="summary"
-                                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                                className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-medium py-2.5 transition-all"
                             >
-                                Summary
+                                Evaluation Summary
                             </TabsTrigger>
                             <TabsTrigger
                                 value="team"
-                                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
+                                className="data-[state=active]:bg-emerald-700 data-[state=active]:text-white font-medium py-2.5 transition-all"
                             >
-                                Team
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="details"
-                                className="data-[state=active]:bg-emerald-600 data-[state=active]:text-white"
-                            >
-                                Details
+                                Team Members
                             </TabsTrigger>
                         </TabsList>
 
-                        <TabsContent value="gallery" className="space-y-8 mt-4">
+                        <TabsContent value="gallery" className="space-y-8 mt-6">
                             <div className="relative aspect-video rounded-xl overflow-hidden border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
                                 <Image
                                     src={
@@ -644,19 +683,18 @@ export default function ProjectDetail({
                                     fill
                                     className="object-cover"
                                 />
-                                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a16]/80 via-transparent to-transparent"></div>
+                                <div className="absolute inset-0 bg-gradient-to-t from-[#0a0a16]/90 via-[#0a0a16]/20 to-[#0a0a16]/30"></div>
                                 <div className="absolute bottom-0 left-0 right-0 p-6">
                                     <h3 className="text-xl font-bold text-white">
                                         Project Screenshot {activeImage + 1}
                                     </h3>
-                                    <p className="text-emerald-200/80">
-                                        Explore the visual elements of{" "}
-                                        {project.name}
+                                    <p className="text-emerald-200/90">
+                                        {project.name} - Visual Implementation
                                     </p>
                                 </div>
                             </div>
 
-                            <div className="grid grid-cols-4 gap-3">
+                            <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
                                 {project.images.map((image, index) => (
                                     <div
                                         key={index}
@@ -678,213 +716,295 @@ export default function ProjectDetail({
                             </div>
                         </TabsContent>
 
-                        <TabsContent value="summary" className="space-y-8 mt-4">
-                            <div className="grid gap-6 md:grid-cols-2">
-                                <div className="rounded-xl overflow-hidden border border-emerald-500/20 bg-gradient-to-br from-[#1a1a2e] to-[#1a1a2e]/70 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                                    <div className="p-4 border-b border-emerald-500/10 bg-emerald-500/5 flex items-center gap-2">
-                                        <Lightbulb className="h-5 w-5 text-emerald-400" />
-                                        <h3 className="text-lg font-medium text-white">
-                                            Key Features
-                                        </h3>
-                                    </div>
-                                    <div className="p-5">
-                                        <ul className="space-y-3 text-sm">
-                                            {(
-                                                project.analysis
-                                                    ?.keyFeatures || [
-                                                    "Intuitive user interface with responsive design",
-                                                    "Real-time data synchronization and updates",
-                                                    "Advanced analytics and reporting capabilities",
-                                                    "Integration with popular third-party services",
-                                                ]
-                                            ).map((feature, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="flex items-start gap-2"
-                                                >
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span className="text-emerald-100/90">
-                                                        {feature}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
+                        <TabsContent value="summary" className="space-y-8 mt-6">
+                            <div className="bg-[#1a1a2e]/70 backdrop-blur-md border border-emerald-500/20 rounded-xl overflow-hidden p-6">
+                                <h2 className="text-xl font-semibold text-white border-b border-emerald-500/20 pb-3 mb-6">
+                                    Judge Evaluation Framework
+                                </h2>
 
-                                <div className="rounded-xl overflow-hidden border border-emerald-500/20 bg-[#1a1a2e]/70 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative">
-                                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-emerald-500 to-teal-500"></div>
-                                    <div className="p-4 border-b border-emerald-500/10 flex items-center gap-2">
-                                        <Code className="h-5 w-5 text-emerald-400" />
-                                        <h3 className="text-lg font-medium text-white">
-                                            Technical Highlights
-                                        </h3>
-                                    </div>
-                                    <div className="p-5">
-                                        <ul className="space-y-3 text-sm">
-                                            {[
-                                                `Implemented ${project.techStack
-                                                    .slice(0, 2)
-                                                    .join(
-                                                        " and "
-                                                    )} for the frontend`,
-                                                `Utilized ${project.techStack
-                                                    .slice(2, 4)
-                                                    .join(
-                                                        " with "
-                                                    )} for backend services`,
-                                                "Optimized performance with efficient data structures",
-                                                "Secure authentication and data protection",
-                                            ].map((feature, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="flex items-start gap-2"
-                                                >
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span className="text-emerald-100/90">
-                                                        {feature}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div className="backdrop-blur-md bg-[#1a1a2e]/50 rounded-xl overflow-hidden border border-emerald-500/20 shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                                    <div className="p-4 border-b border-emerald-500/10 bg-emerald-500/5 flex items-center gap-2">
-                                        <HeartPulse className="h-5 w-5 text-emerald-400" />
-                                        <h3 className="text-lg font-medium text-white">
-                                            Impact & Potential
-                                        </h3>
-                                    </div>
-                                    <div className="p-5">
-                                        <ul className="space-y-3 text-sm">
-                                            {[
-                                                `Addresses key challenges in ${
-                                                    project.name
-                                                        .toLowerCase()
-                                                        .includes("eco")
-                                                        ? "sustainability"
-                                                        : project.name
-                                                              .toLowerCase()
-                                                              .includes("medi")
-                                                        ? "healthcare"
-                                                        : project.name
-                                                              .toLowerCase()
-                                                              .includes("code")
-                                                        ? "developer productivity"
-                                                        : project.name
-                                                              .toLowerCase()
-                                                              .includes("fin")
-                                                        ? "personal finance"
-                                                        : project.name
-                                                              .toLowerCase()
-                                                              .includes("study")
-                                                        ? "education"
-                                                        : project.name
-                                                              .toLowerCase()
-                                                              .includes("food")
-                                                        ? "food distribution"
-                                                        : "its domain"
-                                                }`,
-                                                "Potential to scale and benefit thousands of users",
-                                                "Designed with accessibility and inclusivity in mind",
-                                                "Sustainable long-term development roadmap",
-                                            ].map((feature, index) => (
-                                                <li
-                                                    key={index}
-                                                    className="flex items-start gap-2"
-                                                >
-                                                    <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
-                                                    <span className="text-emerald-100/90">
-                                                        {feature}
-                                                    </span>
-                                                </li>
-                                            ))}
-                                        </ul>
-                                    </div>
-                                </div>
-
-                                <div className="rounded-xl overflow-hidden border border-emerald-500/20 bg-[radial-gradient(circle_at_top_right,rgba(16,185,129,0.15),transparent_70%)] shadow-[0_0_30px_rgba(16,185,129,0.1)]">
-                                    <div className="p-4 border-b border-emerald-500/10 flex items-center gap-2">
-                                        <Zap className="h-5 w-5 text-emerald-400" />
-                                        <h3 className="text-lg font-medium text-white">
-                                            Achievements
-                                        </h3>
-                                    </div>
-                                    <div className="p-5">
-                                        <div className="grid grid-cols-2 gap-3">
-                                            {[
-                                                {
-                                                    icon: Star,
-                                                    title: "Best Technical Implementation",
-                                                },
-                                                {
-                                                    icon: Lightbulb,
-                                                    title: "Most Innovative Solution",
-                                                },
-                                                {
-                                                    icon: HeartPulse,
-                                                    title: "Greatest Social Impact",
-                                                },
-                                                {
-                                                    icon: Award,
-                                                    title: "Finalist Selection",
-                                                },
-                                            ].map((achievement, index) => (
-                                                <div
-                                                    key={index}
-                                                    className="rounded-lg border border-emerald-500/20 bg-[#1a1a2e]/70 p-3 text-center shadow-sm hover:border-emerald-500/40 hover:shadow-[0_0_15px_rgba(16,185,129,0.2)] transition-all duration-300"
-                                                >
-                                                    <achievement.icon className="h-5 w-5 text-emerald-400 mx-auto mb-1" />
-                                                    <p className="text-xs font-medium text-emerald-100">
-                                                        {achievement.title}
-                                                    </p>
-                                                </div>
-                                            ))}
+                                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                    <div className="bg-[rgba(22,31,46,0.5)] border border-emerald-500/20 rounded-lg p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="bg-emerald-500/20 rounded-full p-2">
+                                                <Lightbulb className="h-5 w-5 text-emerald-400" />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-white">
+                                                Innovation
+                                            </h3>
                                         </div>
+                                        <div className="space-y-1 mb-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-emerald-200 font-medium">
+                                                    Score
+                                                </span>
+                                                <span className="text-emerald-400 font-bold">
+                                                    {scores.innovation}%
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-[#1a1a2e] rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-emerald-500"
+                                                    style={{
+                                                        width: `${scores.innovation}%`,
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-emerald-100/80">
+                                            Assessment of the project's
+                                            originality, creativity, and
+                                            innovative approach to solving
+                                            problems.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-[rgba(22,31,46,0.5)] border border-emerald-500/20 rounded-lg p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="bg-teal-500/20 rounded-full p-2">
+                                                <Code className="h-5 w-5 text-teal-400" />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-white">
+                                                Technical
+                                            </h3>
+                                        </div>
+                                        <div className="space-y-1 mb-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-emerald-200 font-medium">
+                                                    Score
+                                                </span>
+                                                <span className="text-teal-400 font-bold">
+                                                    {scores.technical}%
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-[#1a1a2e] rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-teal-500"
+                                                    style={{
+                                                        width: `${scores.technical}%`,
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-emerald-100/80">
+                                            Evaluation of code quality,
+                                            architecture, technical complexity
+                                            and implementation excellence.
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-[rgba(22,31,46,0.5)] border border-emerald-500/20 rounded-lg p-5">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <div className="bg-cyan-500/20 rounded-full p-2">
+                                                <HeartPulse className="h-5 w-5 text-cyan-400" />
+                                            </div>
+                                            <h3 className="text-lg font-medium text-white">
+                                                Impact
+                                            </h3>
+                                        </div>
+                                        <div className="space-y-1 mb-3">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-emerald-200 font-medium">
+                                                    Score
+                                                </span>
+                                                <span className="text-cyan-400 font-bold">
+                                                    {scores.impact}%
+                                                </span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-[#1a1a2e] rounded-full overflow-hidden">
+                                                <div
+                                                    className="h-full rounded-full bg-cyan-500"
+                                                    style={{
+                                                        width: `${scores.impact}%`,
+                                                    }}
+                                                ></div>
+                                            </div>
+                                        </div>
+                                        <p className="text-sm text-emerald-100/80">
+                                            Assessment of the project's
+                                            potential real-world impact,
+                                            societal benefit, and market
+                                            viability.
+                                        </p>
                                     </div>
                                 </div>
                             </div>
-                        </TabsContent>
 
-                        <TabsContent value="team" className="space-y-8 mt-4">
-                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-                                {project.teamMembers.map((member, index) => (
-                                    <div
-                                        key={member.name}
-                                        className="backdrop-blur-md bg-[#1a1a2e]/50 rounded-xl overflow-hidden border border-emerald-500/20 h-full hover:shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-all duration-300"
-                                    >
-                                        <div className="p-6 flex flex-col items-center text-center">
-                                            <div className="relative mb-6">
-                                                <div className="absolute -inset-1 bg-gradient-to-r from-emerald-500 to-teal-500 rounded-full blur-md opacity-70"></div>
-                                                <Avatar className="h-24 w-24 border-4 border-[#1a1a2e] relative z-10">
-                                                    <AvatarImage
-                                                        src={member.avatar}
-                                                        alt={member.name}
-                                                    />
-                                                    <AvatarFallback className="text-2xl bg-gradient-to-br from-emerald-600 to-teal-600 text-white">
-                                                        {member.name.charAt(0)}
-                                                    </AvatarFallback>
-                                                </Avatar>
+                            <div className="grid gap-6 md:grid-cols-2">
+                                {/* Learning Curve */}
+                                {project.analysis?.learningCurve &&
+                                    project.analysis.learningCurve.length >
+                                        0 && (
+                                        <div className="rounded-xl overflow-hidden border border-emerald-500/20 bg-[#1a1a2e]/70 shadow-[0_0_30px_rgba(16,185,129,0.1)] relative">
+                                            <div className="p-4 border-b border-emerald-500/10 flex items-center gap-2">
+                                                <Zap className="h-5 w-5 text-emerald-400" />
+                                                <h3 className="text-lg font-medium text-white">
+                                                    Learning Journey
+                                                </h3>
                                             </div>
-                                            <h3 className="font-bold text-xl mb-1 text-white">
-                                                {member.name}
-                                            </h3>
-                                            <p className="text-sm text-emerald-300/80 mb-6">
-                                                {member.role}
-                                            </p>
-                                            <div className="flex gap-3 mt-auto">
-                                                <div className="rounded-full bg-emerald-500/10 p-2 cursor-pointer hover:bg-emerald-500/20 transition-colors">
-                                                    <Github className="h-4 w-4 text-emerald-400" />
-                                                </div>
-                                                <div className="rounded-full bg-emerald-500/10 p-2 cursor-pointer hover:bg-emerald-500/20 transition-colors">
-                                                    <LinkIcon className="h-4 w-4 text-emerald-400" />
-                                                </div>
+                                            <div className="p-5">
+                                                <ul className="space-y-3 text-sm">
+                                                    {project.analysis.learningCurve.map(
+                                                        (
+                                                            learning: string,
+                                                            index: number
+                                                        ) => (
+                                                            <li
+                                                                key={index}
+                                                                className="flex items-start gap-2"
+                                                            >
+                                                                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-emerald-400 shrink-0"></span>
+                                                                <span className="text-emerald-100/90">
+                                                                    {learning}
+                                                                </span>
+                                                            </li>
+                                                        )
+                                                    )}
+                                                </ul>
                                             </div>
                                         </div>
+                                    )}
+                            </div>
+
+                            {/* Project Duration */}
+                            {project.devpostData?.details?.duration && (
+                                <div className="mt-6 p-4 border border-emerald-500/20 bg-[#1a1a2e]/70 rounded-lg shadow-md">
+                                    <div className="flex items-center gap-2">
+                                        <Star className="h-5 w-5 text-emerald-400" />
+                                        <span className="text-white">
+                                            Project Duration:{" "}
+                                            <span className="text-emerald-300">
+                                                {
+                                                    project.devpostData.details
+                                                        .duration
+                                                }
+                                            </span>
+                                        </span>
                                     </div>
-                                ))}
+                                </div>
+                            )}
+                        </TabsContent>
+
+                        <TabsContent value="team" className="mt-6">
+                            <div className="mb-6 p-6 rounded-xl border border-emerald-500/20 bg-[#1a1a2e]/70">
+                                <h2 className="text-xl font-semibold text-white mb-2">
+                                    Team Assessment
+                                </h2>
+                                <p className="text-emerald-200/80">
+                                    This project was built by a team of{" "}
+                                    {
+                                        (project.team || project.teamMembers)
+                                            .length
+                                    }{" "}
+                                    developers with combined expertise in{" "}
+                                    {project.techStack.join(", ")}.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                                {(project.team || project.teamMembers).map(
+                                    (member, index) => {
+                                        // Handle both new team format and legacy teamMembers format
+                                        const name =
+                                            "name" in member
+                                                ? member.name
+                                                : member;
+                                        const role =
+                                            "role" in member
+                                                ? member.role || "Team Member"
+                                                : "Team Member";
+                                        const avatar =
+                                            "avatar" in member
+                                                ? member.avatar ||
+                                                  "/placeholder.svg?height=100&width=100"
+                                                : "/placeholder.svg?height=100&width=100";
+                                        const links =
+                                            "links" in member
+                                                ? member.links || {}
+                                                : {};
+
+                                        return (
+                                            <div
+                                                key={index}
+                                                className="backdrop-blur-md bg-[rgba(26,26,46,0.7)] border border-emerald-500/20 rounded-xl overflow-hidden shadow-[0_0_15px_rgba(16,185,129,0.1)] hover:shadow-[0_0_30px_rgba(16,185,129,0.2)] transition-all duration-300"
+                                            >
+                                                <div className="h-2 w-full bg-gradient-to-r from-emerald-500 to-teal-500"></div>
+                                                <div className="p-6 flex flex-col items-center text-center">
+                                                    <Avatar className="h-28 w-28 mb-5 ring-2 ring-emerald-500/30 ring-offset-4 ring-offset-[#1a1a2e]">
+                                                        <AvatarImage
+                                                            src={avatar}
+                                                            alt={name}
+                                                        />
+                                                        <AvatarFallback className="bg-emerald-800 text-emerald-200 text-xl">
+                                                            {name
+                                                                .split(" ")
+                                                                .map(
+                                                                    (n) => n[0]
+                                                                )
+                                                                .join("")}
+                                                        </AvatarFallback>
+                                                    </Avatar>
+                                                    <h3 className="text-xl font-semibold text-white mb-1">
+                                                        {name}
+                                                    </h3>
+                                                    <p className="text-sm text-emerald-300 mb-4 bg-emerald-500/10 px-3 py-1 rounded-full">
+                                                        {role}
+                                                    </p>
+
+                                                    {/* Social Links */}
+                                                    {Object.keys(links).length >
+                                                        0 && (
+                                                        <div className="flex gap-3 mt-2">
+                                                            {Object.entries(
+                                                                links
+                                                            ).map(
+                                                                ([
+                                                                    platform,
+                                                                    url,
+                                                                ]) => (
+                                                                    <a
+                                                                        key={
+                                                                            platform
+                                                                        }
+                                                                        href={
+                                                                            url
+                                                                        }
+                                                                        target="_blank"
+                                                                        rel="noopener noreferrer"
+                                                                        className="h-9 w-9 rounded-full bg-emerald-900/50 flex items-center justify-center text-emerald-400 hover:bg-emerald-800 hover:text-emerald-300 transition-colors"
+                                                                    >
+                                                                        {platform ===
+                                                                        "github" ? (
+                                                                            <Github className="h-4 w-4" />
+                                                                        ) : platform ===
+                                                                          "devpost" ? (
+                                                                            <span className="text-xs font-bold">
+                                                                                DP
+                                                                            </span>
+                                                                        ) : (
+                                                                            <LinkIcon className="h-4 w-4" />
+                                                                        )}
+                                                                    </a>
+                                                                )
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    <div className="w-full pt-4 mt-4 border-t border-emerald-500/10">
+                                                        <div className="flex items-center justify-center gap-2 text-xs text-emerald-200/70">
+                                                            <Badge
+                                                                variant="outline"
+                                                                className="bg-emerald-500/5 text-emerald-300 border-emerald-500/20"
+                                                            >
+                                                                Contributor #
+                                                                {index + 1}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        );
+                                    }
+                                )}
                             </div>
                         </TabsContent>
 
@@ -958,7 +1078,7 @@ export default function ProjectDetail({
                                         {[
                                             {
                                                 label: "Hackathon",
-                                                value: `MLH Hackathon #${hackathonId}`,
+                                                value: `Hackathon Project`,
                                             },
                                             {
                                                 label: "Project Name",

@@ -1,33 +1,40 @@
-import type React from "react"
-import type { Metadata } from "next"
-import { Inter } from "next/font/google"
-import "./globals.css"
-import { ThemeProvider } from "@/components/theme-provider"
+import type React from "react";
+import type { Metadata } from "next";
+import { Inter } from "next/font/google";
+import "./globals.css";
+import { ThemeProvider } from "@/components/theme-provider";
+import { Navbar } from "@/components/navbar";
 
-const inter = Inter({ subsets: ["latin"] })
+const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "MLH Projects Explorer",
-  description: "Discover amazing projects from Major League Hacking events",
-    generator: 'v0.dev'
-}
+    title: "DevScan - Discover Hackathon Projects",
+    description:
+        "Discover amazing projects from Major League Hacking events with AI-powered analysis",
+};
 
 export default function RootLayout({
-  children,
+    children,
 }: Readonly<{
-  children: React.ReactNode
+    children: React.ReactNode;
 }>) {
-  return (
-    <html lang="en" suppressHydrationWarning>
-      <body className={`${inter.className} dark`}>
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false} disableTransitionOnChange>
-          {children}
-        </ThemeProvider>
-      </body>
-    </html>
-  )
+    return (
+        <html lang="en" suppressHydrationWarning>
+            <body
+                className={`${inter.className} dark min-h-screen bg-[#0a0a16]`}
+            >
+                <ThemeProvider
+                    attribute="class"
+                    defaultTheme="dark"
+                    enableSystem={false}
+                    disableTransitionOnChange
+                >
+                    <Navbar />
+                    <main className="pt-16">{children}</main>
+                </ThemeProvider>
+            </body>
+        </html>
+    );
 }
 
-
-
-import './globals.css'
+import "./globals.css";
