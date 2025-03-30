@@ -21,12 +21,14 @@ export interface TeamMember {
         portfolio?: string;
     };
 }
+
 export interface ProjectLinks {
     github?: string;
     demo?: string;
     devpost?: string;
     website?: string;
 }
+
 export interface Details {
     techStack: string[];
     links: ProjectLinks;
@@ -38,17 +40,4 @@ export interface ProjectPageData {
     summary: Summary;
     team: TeamMember[];
     details: Details;
-}
-
-export interface ScrapeResult {
-    markdown: string;
-    metadata: {
-        title: string;
-        scrapeId?: string;
-        [key: string]: any;
-    };
-}
-export interface ScrapeResponse {
-    success: boolean;
-    data: ScrapeResult;
 }
