@@ -132,7 +132,7 @@ import ProjectDetailLoading from "./project-detail-loading";
 //   }
 // }
 // Type definition for ProjectDetail
-interface ProjectDetailType {
+export interface ProjectDetailType {
     id: string;
     name: string;
     description: string;
