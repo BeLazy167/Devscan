@@ -45,6 +45,56 @@ Analyzes a DevPost project and its associated GitHub repository.
 }
 ```
 
+## Project Search
+
+### Search Projects
+
+```http
+GET /api/projects/search?query=keyword&tech=react&page=1&limit=10
+```
+
+Searches for projects based on provided parameters.
+
+#### Query Parameters
+
+| Parameter | Description                                   | Default | Example    |
+| --------- | --------------------------------------------- | ------- | ---------- |
+| `query`   | Search term (titles, descriptions, summaries) | ""      | blockchain |
+| `tech`    | Filter by technology                          | ""      | react      |
+| `page`    | Current page number                           | 1       | 2          |
+| `limit`   | Number of results per page                    | 10      | 20         |
+
+#### Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "results": [
+            {
+                "id": "string",
+                "title": "string",
+                "description": "string",
+                "techStack": ["string"],
+                "image": "string",
+                "github": "string",
+                "devpost": "string",
+                "analysis": {
+                    "summary": "string",
+                    "score": 85
+                }
+            }
+        ],
+        "pagination": {
+            "total": 42,
+            "page": 1,
+            "limit": 10,
+            "pages": 5
+        }
+    }
+}
+```
+
 ## GitHub Analysis
 
 The GitHub analysis service provides detailed technical analysis of repositories.

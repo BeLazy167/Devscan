@@ -34,13 +34,19 @@ export const DevPostModel =
 
 export async function POST(req: NextRequest) {
     try {
+        console.log("[API] Starting DevPost analysis request");
         const body = await req.json();
         const { id } = body;
+        console.log(`[API] Processing DevPost ID: ${id}`);
+
         await connectToDatabase();
+        console.log(`[API] Connected to database`);
 
         // Check for cached analysis
+        console.log(`[API] Checking for cached analysis for ID: ${id}`);
         const existingAnalysis = await DevPostModel.findOne({ id });
         if (existingAnalysis) {
+            console.log(`[API] Found cached analysis for ID: ${id}`);
             return NextResponse.json(
                 {
                     success: true,
@@ -54,53 +60,71 @@ export async function POST(req: NextRequest) {
         }
 
         // Get or create raw data
+        console.log(`[API] No cached analysis found, checking for raw data`);
         let rawpost = await RawDevPostModel.findOne({ id });
         if (!rawpost) {
+            console.log(`[API] No raw data found, scraping DevPost`);
             const url = `https://devpost.com/software/${id}`;
+            console.log(`[API] Scraping URL: ${url}`);
             const scrapeData = await scrapeDevPost(url);
+            console.log(`[API] Scraping complete, extracting GitHub URL`);
 
             const githubRegex = /https:\/\/github\.com\/([\w.-]+\/[\w.-]+)/;
-
             const githubMatch = githubRegex.exec(scrapeData.markdown);
+            const githubUrl = githubMatch
+                ? `https://github.com/${githubMatch[1]}`
+                : "Not Found";
+            console.log(`[API] GitHub URL: ${githubUrl}`);
 
+            console.log(`[API] Creating raw DevPost record`);
             rawpost = await RawDevPostModel.create({
                 scrapeData,
                 id,
-                githubUrl: githubMatch
-                    ? `https://github.com/${githubMatch[1]}`
-                    : "Not Found",
+                githubUrl,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             });
+            console.log(`[API] Raw DevPost record created`);
+        } else {
+            console.log(`[API] Found existing raw data for ID: ${id}`);
         }
 
         // Analyze the project
+        console.log(`[API] Starting DevPost analysis`);
         const projectData = await analyzeDevPost(rawpost);
+        console.log(`[API] DevPost analysis complete`);
 
         // Handle GitHub analysis safely
+        console.log(`[API] Starting GitHub analysis`);
         let githubAnalysis = null;
         if (rawpost.githubUrl && rawpost.githubUrl !== "Not Found") {
             try {
                 const [owner, repo] = rawpost.githubUrl.split("/").slice(3, 5);
+                console.log(`[API] Analyzing GitHub repo: ${owner}/${repo}`);
                 githubAnalysis = await getRepoAnalysis(owner, repo);
+                console.log(`[API] GitHub analysis complete`);
             } catch (error) {
-                console.error("GitHub analysis failed:", error);
+                console.error("[API] GitHub analysis failed:", error);
                 githubAnalysis = {
                     error: "Failed to analyze GitHub repository",
                 };
             }
         } else {
+            console.log(`[API] No GitHub repository found`);
             githubAnalysis = { error: "No GitHub repository found" };
         }
-        
+
         // Save and return the analyzed data
-        const devpost = await DevPostModel.create({
+        console.log(`[API] Saving analyzed data to database`);
+        const devpost = new DevPostModel({
             id,
             analysis: projectData,
             githubAnalysis,
             createdAt: new Date(),
             updatedAt: new Date(),
         });
+        await devpost.save();
+        console.log(`[API] Analysis saved successfully`);
 
         return NextResponse.json(
             {
@@ -113,7 +137,7 @@ export async function POST(req: NextRequest) {
             { status: 200 }
         );
     } catch (error: any) {
-        console.error("Error processing DevPost:", error);
+        console.error("[API] Error processing DevPost:", error);
         return NextResponse.json(
             {
                 error: error.message || "Failed to process DevPost",

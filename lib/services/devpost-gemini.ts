@@ -69,8 +69,11 @@ export interface ProjectPageData {
 export async function analyzeDevPost(
     rawData: RawData
 ): Promise<ProjectPageData> {
+    console.log(`[Gemini] Starting analysis for project ID: ${rawData.id}`);
+    
     // Initialize the Google Generative AI with API key from config
     const genAI = new GoogleGenerativeAI(config.geminiApiKey);
+    console.log(`[Gemini] Initialized with API key: ${config.geminiApiKey.substring(0, 5)}...`);
 
     // Get the generative model
     const model = genAI.getGenerativeModel({
@@ -79,6 +82,7 @@ export async function analyzeDevPost(
             temperature: 0.1, // Low temperature for deterministic output
         },
     });
+    console.log(`[Gemini] Using model: gemini-2.0-flash with temperature 0.1`);
 
     // Construct the prompt for the Gemini model
     const prompt = `
@@ -173,14 +177,18 @@ ${JSON.stringify(
 Please provide your output as a valid JSON string conforming to the \`ProjectPageData\` interface. Ensure the response is well-structured and concise, focusing only on the relevant project details while ignoring extraneous content (e.g., YouTube interface text, login prompts).
 `;
 
-    console.log("prompt", prompt);
+    console.log(`[Gemini] Prompt constructed, length: ${prompt.length} characters`);
 
     // Call the Gemini model with the prompt
+    console.log(`[Gemini] Sending request to Gemini API...`);
     const result = await model.generateContent(prompt);
+    console.log(`[Gemini] Response received from Gemini API`);
     const response = result.response;
 
     // Parse the model's response into ProjectPageData
     const responseText = response.text().trim();
+    console.log(`[Gemini] Response text length: ${responseText.length} characters`);
+    
     try {
         // Clean up the response text to extract just the JSON part
         let jsonString = responseText;
@@ -189,26 +197,41 @@ Please provide your output as a valid JSON string conforming to the \`ProjectPag
         const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)```/);
         if (jsonMatch && jsonMatch[1]) {
             jsonString = jsonMatch[1].trim();
+            console.log(`[Gemini] Extracted JSON from code block`);
         }
 
         // Parse the JSON
+        console.log(`[Gemini] Attempting to parse JSON response`);
         const projectPageData: ProjectPageData = JSON.parse(jsonString);
+        console.log(`[Gemini] Successfully parsed JSON response`);
 
         // Ensure the data has required fields for DevPost model
-        return {
+        const result = {
             ...projectPageData,
             id: rawData.id,
             url:
                 rawData.scrapeData?.metadata?.url ||
                 `https://devpost.com/software/${rawData.id}`,
             title:
-                projectPageData.details?.techStack?.[0] || "Untitled Project",
+                projectPageData.title || 
+                projectPageData.details?.techStack?.[0] || 
+                "Untitled Project",
             description:
+                projectPageData.description ||
                 projectPageData.summary?.keyFeatures?.join(", ") ||
                 "No description available",
         };
+        
+        console.log(`[Gemini] Analysis complete for project ID: ${rawData.id}`);
+        console.log(`[Gemini] Title: ${result.title}`);
+        console.log(`[Gemini] Tech stack: ${result.details.techStack.join(', ')}`);
+        console.log(`[Gemini] Team size: ${result.team.length} members`);
+        
+        return result;
     } catch (e) {
-        console.error("Failed to parse Gemini response:", e);
+        console.error(`[Gemini] Failed to parse Gemini response:`, e);
+        console.log(`[Gemini] Falling back to default project data`);
+        
         // Return fallback data with required fields
         return {
             ...createFallbackProjectData(),
@@ -222,6 +245,7 @@ Please provide your output as a valid JSON string conforming to the \`ProjectPag
 
 // Create fallback project data if parsing fails
 function createFallbackProjectData(): ProjectPageData {
+    console.log(`[Gemini] Creating fallback project data`);
     return {
         gallery: { images: [], videos: [] },
         summary: {

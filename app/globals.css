@@ -151,3 +151,87 @@ html {
 .animate-fade-in-up {
     animation: fade-in-up 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
+
+/* Custom animation for shimmer effect */
+@keyframes shimmer {
+    0% {
+        background-position: 0% 0%;
+    }
+    100% {
+        background-position: 200% 0%;
+    }
+}
+
+.animate-shimmer {
+    animation: shimmer 8s linear infinite;
+}
+
+/* Floating animation for particles */
+@keyframes float {
+    0%,
+    100% {
+        transform: translate(
+            calc(var(--float-x, 0) * 0.5),
+            calc(var(--float-y, 0) * 0.5)
+        );
+    }
+    50% {
+        transform: translate(var(--float-x, 0), var(--float-y, 0));
+    }
+}
+
+.animate-float {
+    animation: float 8s ease-in-out infinite;
+}
+
+/* Blob animation for background elements */
+@keyframes blob {
+    0%,
+    100% {
+        transform: translate(0, 0) scale(1);
+    }
+    25% {
+        transform: translate(5%, -5%) scale(1.05);
+    }
+    50% {
+        transform: translate(0, 10%) scale(0.95);
+    }
+    75% {
+        transform: translate(-5%, -5%) scale(1.05);
+    }
+}
+
+.animate-blob {
+    animation: blob 20s ease-in-out infinite;
+}
+
+/* Bounce X animation for chevron */
+@keyframes bounce-x {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    50% {
+        transform: translateX(5px);
+    }
+}
+
+.animate-bounce-x {
+    animation: bounce-x 1s ease-in-out infinite;
+}
+
+/* Fade-in-up animation for content */
+@keyframes fade-in-up {
+    0% {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.8s ease-out forwards;
+}

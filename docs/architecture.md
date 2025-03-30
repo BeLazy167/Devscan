@@ -11,6 +11,8 @@ graph TD
     B --> D[GitHub API]
     B --> E[Gemini AI]
     B --> F[MongoDB]
+    A --> G[Search Functionality]
+    G --> F
 ```
 
 ## Core Components
@@ -24,6 +26,7 @@ graph TD
 ### 2. API Layer
 
 -   `/api/devpost`: DevPost project analysis endpoint
+-   `/api/projects/search`: Project search and filtering endpoint
 -   GitHub repository analysis service
 -   Gemini AI integration for technical analysis
 
@@ -31,10 +34,12 @@ graph TD
 
 -   MongoDB for data persistence
 -   Caching layer for analyzed projects
+-   Search indexes for efficient querying
 
 ## Data Flow
 
 1. **Project Analysis Request**
+
     ```mermaid
     sequenceDiagram
         Client->>API: POST /api/devpost
@@ -48,6 +53,19 @@ graph TD
         Gemini-->>API: Technical Analysis
         API->>MongoDB: Save Results
         API-->>Client: Return Analysis
+    ```
+
+2. **Project Search Flow**
+    ```mermaid
+    sequenceDiagram
+        Client->>SearchPage: Request with Params
+        SearchPage->>MongoDB: Query Projects
+        MongoDB-->>SearchPage: Return Matches
+        SearchPage->>Client: Render Results
+        Client->>SearchPage: Pagination/Filter
+        SearchPage->>MongoDB: Updated Query
+        MongoDB-->>SearchPage: New Results
+        SearchPage->>Client: Updated Content
     ```
 
 ## Key Services
@@ -69,6 +87,13 @@ graph TD
 -   Processes repository content
 -   Generates technical insights
 -   Provides improvement suggestions
+
+### Search Service
+
+-   Processes search queries
+-   Filters projects by criteria
+-   Handles pagination
+-   Provides relevancy scoring
 
 ## Error Handling
 
@@ -92,6 +117,7 @@ The system implements robust error handling:
 -   Parallel processing
 -   Efficient data fetching
 -   Resource optimization
+-   MongoDB indexes for search performance
 
 ## Monitoring and Logging
 

@@ -22,20 +22,26 @@ Welcome to the project documentation. This documentation provides comprehensive 
     - GitHub Analysis
     - Database Schema
 
-4. [Development Guide](./development.md)
+4. [Features](./features)
+
+    - [Search Functionality](./features/search.md)
+    - Project Analysis
+    - GitHub Integration
+
+5. [Development Guide](./development.md)
 
     - Setup Development Environment
     - Code Style
     - Testing
     - Deployment
 
-5. [Contributing](./contributing.md)
+6. [Contributing](./contributing.md)
 
     - How to Contribute
     - Pull Request Process
     - Code Review Guidelines
 
-6. [Troubleshooting](./troubleshooting.md)
+7. [Troubleshooting](./troubleshooting.md)
     - Common Issues
     - Debug Guide
     - Support
@@ -44,5 +50,6 @@ Welcome to the project documentation. This documentation provides comprehensive 
 
 -   [API Reference](./api/README.md)
 -   [Environment Setup](./getting-started.md#environment-setup)
+-   [Search Documentation](./features/search.md)
 -   [Development Workflow](./development.md#workflow)
 -   [Database Schema](./api/database.md)
