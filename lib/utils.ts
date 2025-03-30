@@ -57,8 +57,8 @@ export async function scrapeDevPost(url: string): Promise<ScrapeResultData> {
         // Using the Firecrawl library with standard parameters
         const scrapeResult = (await firecrawl.scrapeUrl(url, {
             formats: ["markdown"],
+            onlyMainContent: false,
         })) as ScrapeResultData;
-        console.log("scrapeResult", scrapeResult);
         return scrapeResult;
     } catch (error) {
         console.error("Firecrawl scraping error:", error);

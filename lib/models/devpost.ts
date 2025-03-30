@@ -5,6 +5,7 @@ export interface RawDevPost {
     updatedAt: Date;
     createdAt: Date;
     id: string;
+    githubUrl: string;
 }
 
 // export interface DevPost {
@@ -89,6 +90,7 @@ export interface ProjectPageData {
     summary: Summary;
     team: TeamMember[];
     details: Details;
+    githubUrl: string;
 }
 
 // // Now, define Devpost, which extends ProjectPageData
@@ -130,4 +132,5 @@ export interface Devpost {
     analysis: Object;
     createdAt: Date;
     updatedAt: Date;
+    githubAnalysis: Object;
 }

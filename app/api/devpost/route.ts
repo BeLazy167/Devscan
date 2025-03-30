@@ -2,24 +2,28 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "../../../lib/mongodb";
 import { Devpost, RawDevPost } from "../../../lib/models/devpost";
 import { scrapeDevPost } from "../../../lib/utils";
-import { z } from "zod";
 import mongoose from "mongoose";
 import { analyzeDevPost } from "@/lib/services/devpost-gemini";
-// Schema for raw devpost data
+import { getRepoAnalysis } from "@/lib/services/github-gemini";
+
+// Define schemas with necessary fields
 const RawDevPostSchema = new mongoose.Schema<RawDevPost>({
     scrapeData: { type: Object, required: true },
+    githubUrl: { type: String }, // Added to store GitHub URL
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
     id: { type: String, required: true, unique: true },
 });
+
 const DevPostSchema = new mongoose.Schema<Devpost>({
     id: { type: String, required: true, unique: true },
     analysis: { type: Object, required: true },
+    githubAnalysis: { type: Object }, // Added to store GitHub analysis
     createdAt: { type: Date, default: Date.now },
     updatedAt: { type: Date, default: Date.now },
 });
 
-// Model for raw devpost data (create if it doesn't exist)
+// Create models
 export const RawDevPostModel =
     mongoose.models.RawDevPost ||
     mongoose.model<RawDevPost>("RawDevPost", RawDevPostSchema);
@@ -28,20 +32,15 @@ export const DevPostModel =
     mongoose.models.Devpost ||
     mongoose.model<Devpost>("Devpost", DevPostSchema);
 
-// Validation schema for request body
-
 export async function POST(req: NextRequest) {
     try {
         const body = await req.json();
         const { id } = body;
         await connectToDatabase();
 
-        // First check if we already have analyzed data
+        // Check for cached analysis
         const existingAnalysis = await DevPostModel.findOne({ id });
         if (existingAnalysis) {
-            console.log(
-                `Analysis already exists for project ${id}, returning cached data`
-            );
             return NextResponse.json(
                 {
                     success: true,
@@ -54,51 +53,67 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        // Check if we have raw data but not analyzed
-        const existingRaw = await RawDevPostModel.findOne({ id });
-        let rawpost;
-
-        if (existingRaw) {
-            console.log(`Raw data exists for ${id}, analyzing...`);
-            rawpost = existingRaw;
-        } else {
-            // Need to scrape
-            console.log(`No data for ${id}, scraping from DevPost...`);
+        // Get or create raw data
+        let rawpost = await RawDevPostModel.findOne({ id });
+        if (!rawpost) {
             const url = `https://devpost.com/software/${id}`;
             const scrapeData = await scrapeDevPost(url);
 
-            // Save raw data
+            const match = scrapeData.markdown.match(
+                /\[GitHub Repo\]\(([^ ]+)\)/
+            );
+
+            const githubUrl = match ? match[1] : "Not Found";
+
             rawpost = await RawDevPostModel.create({
                 scrapeData,
                 id,
+                githubUrl,
                 createdAt: new Date(),
                 updatedAt: new Date(),
             });
         }
 
-        // Analyze data
+        // Analyze the project
         const projectData = await analyzeDevPost(rawpost);
 
-        // Save to database
-        await DevPostModel.create({
+        // Handle GitHub analysis safely
+        let githubAnalysis = null;
+        if (rawpost.githubUrl && rawpost.githubUrl !== "Not Found") {
+            try {
+                const [owner, repo] = rawpost.githubUrl.split("/").slice(3, 5);
+                githubAnalysis = await getRepoAnalysis(owner, repo);
+            } catch (error) {
+                console.error("GitHub analysis failed:", error);
+                githubAnalysis = {
+                    error: "Failed to analyze GitHub repository",
+                };
+            }
+        } else {
+            githubAnalysis = { error: "No GitHub repository found" };
+        }
+
+        // Save and return the analyzed data
+        const devpost = await DevPostModel.create({
+            id,
             analysis: projectData,
+            githubAnalysis,
             createdAt: new Date(),
             updatedAt: new Date(),
-            id,
         });
 
         return NextResponse.json(
             {
                 success: true,
                 data: {
-                    source: existingRaw ? "analyzed_existing" : "fresh",
-                    projectData,
+                    source: "fresh",
+                    projectData: devpost,
                 },
             },
             { status: 200 }
         );
     } catch (error: any) {
-        console.error("Error in DevPost processing:", error);
+        console.error("Error processing DevPost:", error);
         return NextResponse.json(
             {
                 error: error.message || "Failed to process DevPost",
